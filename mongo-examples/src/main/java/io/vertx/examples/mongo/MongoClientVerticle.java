@@ -48,22 +48,33 @@ public class MongoClientVerticle extends AbstractVerticle {
       cluster.add(host);
     }
 
-    System.out.println(cluster.toString());
-
     String replicaSet = new String("rs");
 
     JsonObject mongoconfig = new JsonObject()
         .put("hosts", cluster)
         .put("replicaSet", replicaSet)
-        .put("db_name", db);
+        .put("db_name", db)
+        .put("keepAlive", true)
+        .put("connectTimeoutMS", 600000);
 
-    System.out.println(mongoconfig.toString());
     MongoClient mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
-      System.out.println("connected");
     JsonObject product1 = new JsonObject().put("itemId", "12345").put("name", "Cooler").put("price", "100.0");
 
-    mongoClient.insert("products", product1, id -> {
+    mongoClient.find("test", new JsonObject(), res -> {
+      if (res.succeeded()) {
+
+        for (JsonObject json : res.result()) {
+          System.out.println(json.encodePrettily());
+        }
+
+      } else {
+        res.cause().printStackTrace();
+      }
+
+    });
+
+   mongoClient.insert("products", product1, id -> {
       System.out.println("Inserted id: " + id.result());
 
       mongoClient.find("products", new JsonObject().put("itemId", "12345"), res -> {
@@ -79,7 +90,7 @@ public class MongoClientVerticle extends AbstractVerticle {
 
     });
 
-    mongoClient.close();
+    //mongoClient.close();
 
   }
 }
