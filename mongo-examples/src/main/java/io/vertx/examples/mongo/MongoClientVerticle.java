@@ -2,6 +2,7 @@ package io.vertx.examples.mongo;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.examples.utils.Runner;
 import io.vertx.ext.mongo.MongoClient;
@@ -29,15 +30,40 @@ public class MongoClientVerticle extends AbstractVerticle {
       db = "test";
     }
 
+    JsonArray cluster = config.getJsonArray("hosts");
+    if (cluster == null) {
+      JsonObject host = new JsonObject();
+      cluster = new JsonArray();
+
+      host.put("host","localhost").put("port",27000);
+      cluster.add(host);
+      host.clear();
+      host.put("host","localhost").put("port",27010);
+      cluster.add(host);
+      host.clear();
+      host.put("host","localhost").put("port",27020);
+      cluster.add(host);
+      host.clear();
+      host.put("host","localhost").put("port",27020);
+      cluster.add(host);
+    }
+
+    System.out.println(cluster.toString());
+
+    String replicaSet = new String("rs");
+
     JsonObject mongoconfig = new JsonObject()
-        .put("connection_string", uri)
+        .put("hosts", cluster)
+        .put("replicaSet", replicaSet)
         .put("db_name", db);
 
+    System.out.println(mongoconfig.toString());
     MongoClient mongoClient = MongoClient.createShared(vertx, mongoconfig);
 
+      System.out.println("connected");
     JsonObject product1 = new JsonObject().put("itemId", "12345").put("name", "Cooler").put("price", "100.0");
 
-    mongoClient.save("products", product1, id -> {
+    mongoClient.insert("products", product1, id -> {
       System.out.println("Inserted id: " + id.result());
 
       mongoClient.find("products", new JsonObject().put("itemId", "12345"), res -> {
@@ -52,6 +78,8 @@ public class MongoClientVerticle extends AbstractVerticle {
       });
 
     });
+
+    mongoClient.close();
 
   }
 }
